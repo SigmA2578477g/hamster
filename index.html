@@ -402,7 +402,7 @@
         <div class="auth-section">
             <h3>Авторизация через Telegram</h3>
             <p>Войдите, чтобы сохранять прогресс</p>
-            <button class="auth-button" id="auth-button">Войти через Telegram</button>
+            <div id="telegram-login-container"></div>
             
             <div class="user-info" id="user-info" style="display: none;">
                 <img class="user-avatar" id="user-avatar" src="" alt="Аватар">
@@ -449,6 +449,21 @@
     </div>
 
     <script>
+        // Функция обработки авторизации через Telegram
+        function onTelegramAuth(user) {
+            alert('Logged in as ' + user.first_name + ' ' + user.last_name + ' (' + user.id + (user.username ? ', @' + user.username : '') + ')');
+            
+            // Сохраняем данные пользователя
+            localStorage.setItem('telegramUser', JSON.stringify(user));
+            
+            // Обновляем интерфейс
+            document.getElementById('user-avatar').src = user.photo_url || 'https://via.placeholder.com/50';
+            document.getElementById('user-name').textContent = `${user.first_name} ${user.last_name || ''}`;
+            document.getElementById('user-id').textContent = `ID: ${user.id}${user.username ? ', @' + user.username : ''}`;
+            document.getElementById('user-info').style.display = 'flex';
+            document.getElementById('telegram-login-container').style.display = 'none';
+        }
+        
         // Инициализация Telegram Web App
         let tg = window.Telegram.WebApp;
         tg.expand();
@@ -625,13 +640,33 @@
         
         // Авторизация через Telegram
         function initTelegramAuth() {
-            if (tg.initDataUnsafe.user) {
+            // Проверяем сохраненные данные пользователя
+            const savedUser = localStorage.getItem('telegramUser');
+            if (savedUser) {
+                const user = JSON.parse(savedUser);
+                document.getElementById('user-avatar').src = user.photo_url || 'https://via.placeholder.com/50';
+                document.getElementById('user-name').textContent = `${user.first_name} ${user.last_name || ''}`;
+                document.getElementById('user-id').textContent = `ID: ${user.id}${user.username ? ', @' + user.username : ''}`;
+                document.getElementById('user-info').style.display = 'flex';
+                document.getElementById('telegram-login-container').style.display = 'none';
+            } else if (tg.initDataUnsafe.user) {
+                // Если есть данные из Telegram Web App
                 const user = tg.initDataUnsafe.user;
                 document.getElementById('user-avatar').src = user.photo_url || 'https://via.placeholder.com/50';
                 document.getElementById('user-name').textContent = `${user.first_name} ${user.last_name || ''}`;
                 document.getElementById('user-id').textContent = `ID: ${user.id}`;
                 document.getElementById('user-info').style.display = 'flex';
-                document.getElementById('auth-button').style.display = 'none';
+                document.getElementById('telegram-login-container').style.display = 'none';
+            } else {
+                // Показываем виджет авторизации
+                const widget = document.createElement('script');
+                widget.async = true;
+                widget.src = 'https://telegram.org/js/telegram-widget.js?22';
+                widget.setAttribute('data-telegram-login', 'NodeOlayBot');
+                widget.setAttribute('data-size', 'large');
+                widget.setAttribute('data-onauth', 'onTelegramAuth(user)');
+                widget.setAttribute('data-request-access', 'write');
+                document.getElementById('telegram-login-container').appendChild(widget);
             }
         }
         
